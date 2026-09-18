@@ -1,11 +1,10 @@
 # server.py
 from flask import Flask, request, jsonify, send_file
 import os
-import threading
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="web", static_url_path="")
 
-# 共有データ（PC ⇄ iPhone）
+# 共有データ
 shared = {
     "text": "",
     "url": "",
@@ -16,6 +15,13 @@ shared = {
 # 保存フォルダ
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
+
+# -----------------------------
+# Web UI 配信（index.html）
+# -----------------------------
+@app.route("/")
+def index():
+    return app.send_static_file("index.html")
 
 # -----------------------------
 # テキスト
@@ -30,7 +36,7 @@ def receive_text():
     return jsonify({"text": shared["text"]})
 
 # -----------------------------
-# URL（テキスト扱い）
+# URL
 # -----------------------------
 @app.route("/send-url", methods=["POST"])
 def send_url():
@@ -86,7 +92,7 @@ def stop_server():
     return jsonify({"status": "server stopped"})
 
 # -----------------------------
-# サーバー起動関数
+# サーバー起動
 # -----------------------------
 def start_server():
     app.run(host="0.0.0.0", port=5000, debug=False)
