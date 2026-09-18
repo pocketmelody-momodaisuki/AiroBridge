@@ -1,0 +1,95 @@
+/* スマホの文字サイズ自動拡大を防ぐ */
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Meiryo", sans-serif;
+    font-size: 16px;
+    background: #f7f7f7;
+    line-height: 1.5;
+}
+
+/* コンテナ */
+.container {
+    max-width: 600px;
+    margin: auto;
+    padding: 24px;
+}
+
+/* タイトル + ロゴ */
+.title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.logo {
+    height: 40px;
+}
+
+/* テキストボックス */
+textarea {
+    width: 100%;
+    font-size: 16px;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+    margin-top: 12px;
+}
+
+/* ファイル選択ボタン */
+input[type="file"] {
+    width: 100%;
+    font-size: 18px;
+    padding: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+    box-sizing: border-box;
+    margin-top: 20px;
+}
+
+/* ボタン */
+button {
+    width: 100%;
+    padding: 14px;
+    font-size: 18px;
+    background: #0078ff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    margin-top: 16px;
+}
+
+/* スマホ専用レイアウト */
+@media (max-width: 600px) {
+    body {
+        font-size: 18px;
+    }
+
+    textarea,
+    input[type="file"],
+    button {
+        font-size: 18px;
+        padding: 14px;
+    }
+
+    .container {
+        padding: 16px;
+    }
+
+    .title {
+        font-size: 26px;
+    }
+
+    .logo {
+        height: 44px;
+    }
+}

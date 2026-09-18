@@ -58,7 +58,14 @@ def receive_file(icon, item):
                 f.write(chunk)
 
 def show_qrcode(icon, item):
-    qrcode_window.show_qr(SERVER())
+    try:
+        info = requests.get(f"{SERVER()}/server-info").json()
+        ip = info["ip"]
+        port = info["port"]
+        url = f"http://{ip}:{port}"
+        qrcode_window.show_qr(url)
+    except:
+        qrcode_window.show_qr("http://127.0.0.1:5000")
 
 # --- 終了処理 ---
 def quit_app(icon, item):
