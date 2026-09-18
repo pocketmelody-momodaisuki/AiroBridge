@@ -1,170 +1,155 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>AiroBridge</title>
-<style>
-body {
-    font-family: sans-serif;
-    padding: 20px;
-    background: #f5f5f5;
-}
-h2 {
-    margin-top: 30px;
-}
-.frame {
-    background: white;
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    box-shadow: 0 0 5px rgba(0,0,0,0.1);
-}
-button {
-    padding: 10px 15px;
-    margin: 5px;
-    border: none;
-    background: #0078ff;
-    color: white;
-    border-radius: 5px;
-}
-input[type="text"] {
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-}
-</style>
-<script>
+    <meta charset="UTF-8">
 
-let SERVER = "";
+    <!-- スマホ最適化の最重要設定 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-fetch("/server-info")
-  .then(r => r.json())
-  .then(info => {
-      SERVER = `http://${info.ip}:${info.port}`;
-  });
+    <title>AiroBridge</title>
 
-// -----------------------------
-// テキスト
-// -----------------------------
-async function sendText() {
-    const text = document.getElementById("textInput").value;
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Meiryo", sans-serif;
+            font-size: 16px;
+            background: #f7f7f7;
+            line-height: 1.5;
+        }
 
-    await fetch(`${SERVER}/send-text`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({text})
-    });
-}
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 24px;
+        }
 
+        h1 {
+            font-size: 22px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
 
-async function receiveText() {
-    const r = await fetch(`${SERVER}/receive-text`);
-    const data = await r.json();
-    document.getElementById("textInput").value = data.text;
-}
+        input[type="text"],
+        textarea {
+            width: 100%;
+            font-size: 16px;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-top: 12px;
+        }
 
-// -----------------------------
-// URL
-// -----------------------------
-async function sendURL() {
-    const url = document.getElementById("urlInput").value;
-    await fetch(`${SERVER}/send-url`, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({url})
-    });
-    alert("URL送信完了");
-}
+        button {
+            width: 100%;
+            padding: 14px;
+            font-size: 18px;
+            background: #0078ff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            margin-top: 16px;
+        }
 
-async function receiveURL() {
-    const r = await fetch(`${SERVER}/receive-url`);
-    const data = await r.json();
-    document.getElementById("urlInput").value = data.url;
-}
+        /* スマホ専用レイアウト */
+        @media (max-width: 600px) {
+            body {
+                font-size: 18px;
+            }
 
-// -----------------------------
-// スクショ受信
-// -----------------------------
-async function receiveScreenshot() {
-    const r = await fetch(`${SERVER}/receive-screenshot`);
-    if (!r.ok) {
-        alert("スクショがありません");
-        return;
-    }
-    const blob = await r.blob();
-    const url = URL.createObjectURL(blob);
-    document.getElementById("screenshotImg").src = url;
-}
+            input[type="text"],
+            textarea,
+            button {
+                font-size: 18px;
+                padding: 14px;
+            }
 
-// -----------------------------
-// ファイル送信
-// -----------------------------
-async function sendFile() {
-    const fileInput = document.getElementById("fileInput");
-    if (!fileInput.files.length) {
-        alert("ファイルを選択してください");
-        return;
-    }
-    const form = new FormData();
-    form.append("file", fileInput.files[0]);
+            .container {
+                padding: 16px;
+            }
+        }
+    </style>
 
-    await fetch(`${SERVER}/send-file`, {
-        method: "POST",
-        body: form
-    });
-    alert("ファイル送信完了");
-}
+    <script>
+        async function sendText() {
+            const text = document.getElementById("textInput").value;
 
-// -----------------------------
-// ファイル受信
-// -----------------------------
-async function receiveFile() {
-    const r = await fetch(`${SERVER}/receive-file`);
-    if (!r.ok) {
-        alert("ファイルがありません");
-        return;
-    }
-    const blob = await r.blob();
-    const url = URL.createObjectURL(blob);
+            await fetch("/send-text", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text })
+            });
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "received_file";
-    a.click();
-}
-</script>
+            alert("テキストを送信しました");
+        }
+
+        async function receiveText() {
+            const res = await fetch("/receive-text");
+            const data = await res.json();
+            document.getElementById("textInput").value = data.text;
+        }
+
+        async function sendFile() {
+            const fileInput = document.getElementById("fileInput");
+            if (!fileInput.files.length) {
+                alert("ファイルを選択してください");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            await fetch("/send-file", {
+                method: "POST",
+                body: formData
+            });
+
+            alert("ファイルを送信しました");
+        }
+
+        async function receiveFile() {
+            const res = await fetch("/receive-file");
+            if (!res.ok) {
+                alert("ファイルがありません");
+                return;
+            }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+
+            // Content-Disposition の filename を使う
+            const disposition = res.headers.get("Content-Disposition");
+            let filename = "received_file";
+
+            if (disposition) {
+                const match = disposition.match(/filename="(.+?)"/);
+                if (match) filename = match[1];
+            }
+
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+    </script>
 </head>
+
 <body>
+    <div class="container">
+        <h1>AiroBridge</h1>
 
-<h1>AiroBridge</h1>
+        <!-- テキスト共有 -->
+        <textarea id="textInput" rows="5" placeholder="ここにテキストを入力"></textarea>
+        <button onclick="sendText()">テキスト送信</button>
+        <button onclick="receiveText()">テキスト受信</button>
 
-<div class="frame">
-    <h2>テキスト共有</h2>
-    <input type="text" id="textInput" placeholder="テキストを入力">
-    <button onclick="sendText()">送信</button>
-    <button onclick="receiveText()">受信</button>
-</div>
-
-<div class="frame">
-    <h2>URL共有</h2>
-    <input type="text" id="urlInput" placeholder="URLを入力">
-    <button onclick="sendURL()">送信</button>
-    <button onclick="receiveURL()">受信</button>
-</div>
-
-<div class="frame">
-    <h2>スクショ共有</h2>
-    <button onclick="receiveScreenshot()">受信</button>
-    <br><br>
-    <img id="screenshotImg" style="width:100%; border:1px solid #ccc;">
-</div>
-
-<div class="frame">
-    <h2>ファイル共有</h2>
-    <input type="file" id="fileInput">
-    <button onclick="sendFile()">送信</button>
-    <button onclick="receiveFile()">受信</button>
-</div>
-
+        <!-- ファイル共有 -->
+        <input type="file" id="fileInput" style="margin-top: 20px;">
+        <button onclick="sendFile()">ファイル送信</button>
+        <button onclick="receiveFile()">ファイル受信</button>
+    </div>
 </body>
 </html>

@@ -1,13 +1,23 @@
-# server.py
 from flask import Flask, request, jsonify, send_file
 import os
 import socket
+import mimetypes
+from PIL import Image
+import io
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
 
 app = Flask(__name__, static_folder="web", static_url_path="")
 
-# -----------------------------
-# IP取得
-# -----------------------------
+DATA_DIR = "data"
+os.makedirs(DATA_DIR, exist_ok=True)
+
+shared = {
+    "text": "",
+    "file_path": None
+}
+
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
@@ -15,9 +25,6 @@ def get_ip():
     s.close()
     return ip
 
-# -----------------------------
-# Web UI 配信
-# -----------------------------
 @app.route("/")
 def index():
     return app.send_static_file("index.html")
@@ -25,19 +32,6 @@ def index():
 @app.route("/server-info")
 def server_info():
     return jsonify({"ip": get_ip(), "port": 5000})
-
-# -----------------------------
-# 共有データ
-# -----------------------------
-shared = {
-    "text": "",
-    "url": "",
-    "screenshot_path": None,
-    "file_path": None
-}
-
-DATA_DIR = "data"
-os.makedirs(DATA_DIR, exist_ok=True)
 
 # -----------------------------
 # テキスト
@@ -52,50 +46,65 @@ def receive_text():
     return jsonify({"text": shared["text"]})
 
 # -----------------------------
-# URL
-# -----------------------------
-@app.route("/send-url", methods=["POST"])
-def send_url():
-    shared["url"] = request.json.get("url", "")
-    return jsonify({"status": "ok"})
-
-@app.route("/receive-url", methods=["GET"])
-def receive_url():
-    return jsonify({"url": shared["url"]})
-
-# -----------------------------
-# スクショ
-# -----------------------------
-@app.route("/send-screenshot", methods=["POST"])
-def send_screenshot():
-    file = request.files["file"]
-    save_path = os.path.join(DATA_DIR, "screenshot.png")
-    file.save(save_path)
-    shared["screenshot_path"] = save_path
-    return jsonify({"status": "ok"})
-
-@app.route("/receive-screenshot", methods=["GET"])
-def receive_screenshot():
-    if shared["screenshot_path"] and os.path.exists(shared["screenshot_path"]):
-        return send_file(shared["screenshot_path"], mimetype="image/png")
-    return "No screenshot", 404
-
-# -----------------------------
-# ファイル
+# ファイル（画像含む）
 # -----------------------------
 @app.route("/send-file", methods=["POST"])
-def send_file():
+def send_file_api():
     file = request.files["file"]
-    save_path = os.path.join(DATA_DIR, file.filename)
+
+    # ログ
+    print("----- 受信したファイル情報 -----")
+    print("filename:", file.filename)
+    print("mimetype:", file.mimetype)
+    print("content_type:", file.content_type)
+    print("headers:", file.headers)
+    print("------------------------------")
+
+    # ★ 日本語ファイル名を安全に処理する
+    original_filename = file.filename
+    safe_filename = os.path.basename(original_filename)  # パス除去
+    safe_filename_lower = safe_filename.lower()
+
+    # HEIC → JPEG
+    if safe_filename_lower.endswith(".heic"):
+        heif_data = file.read()
+        img = Image.open(io.BytesIO(heif_data))
+        save_path = os.path.join(DATA_DIR, "received_image.jpg")
+        img.save(save_path, "JPEG")
+        shared["file_path"] = save_path
+        return jsonify({"status": "ok"})
+
+    # PNG / JPG / JPEG → そのまま保存
+    if safe_filename_lower.endswith((".png", ".jpg", ".jpeg")):
+        save_path = os.path.join(DATA_DIR, safe_filename)
+        file.save(save_path)
+        shared["file_path"] = save_path
+        return jsonify({"status": "ok"})
+
+    # その他 → そのまま保存
+    save_path = os.path.join(DATA_DIR, safe_filename)
     file.save(save_path)
     shared["file_path"] = save_path
     return jsonify({"status": "ok"})
 
-@app.route("/receive-file", methods=["GET"])
+@app.route("/receive-file")
 def receive_file():
-    if shared["file_path"] and os.path.exists(shared["file_path"]):
-        return send_file(shared["file_path"], as_attachment=True)
-    return "No file", 404
+    file_path = shared.get("file_path")
+    if not file_path or not os.path.exists(file_path):
+        return "No file", 404
+
+    filename = os.path.basename(file_path)
+    mime, _ = mimetypes.guess_type(filename)
+    if mime is None:
+        mime = "application/octet-stream"
+
+    return send_file(
+        file_path,
+        mimetype=mime,
+        as_attachment=True,
+        download_name=filename
+    )
+
 
 # -----------------------------
 # サーバー停止
@@ -107,9 +116,6 @@ def stop_server():
         shutdown()
     return jsonify({"status": "server stopped"})
 
-# -----------------------------
-# 起動
-# -----------------------------
 def start_server():
     app.run(host="0.0.0.0", port=5000, debug=False)
 
