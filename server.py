@@ -1,10 +1,34 @@
 # server.py
 from flask import Flask, request, jsonify, send_file
 import os
+import socket
 
 app = Flask(__name__, static_folder="web", static_url_path="")
 
+# -----------------------------
+# IP取得
+# -----------------------------
+def get_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    ip = s.getsockname()[0]
+    s.close()
+    return ip
+
+# -----------------------------
+# Web UI 配信
+# -----------------------------
+@app.route("/")
+def index():
+    return app.send_static_file("index.html")
+
+@app.route("/server-info")
+def server_info():
+    return jsonify({"ip": get_ip(), "port": 5000})
+
+# -----------------------------
 # 共有データ
+# -----------------------------
 shared = {
     "text": "",
     "url": "",
@@ -12,16 +36,8 @@ shared = {
     "file_path": None
 }
 
-# 保存フォルダ
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
-
-# -----------------------------
-# Web UI 配信（index.html）
-# -----------------------------
-@app.route("/")
-def index():
-    return app.send_static_file("index.html")
 
 # -----------------------------
 # テキスト
@@ -92,7 +108,7 @@ def stop_server():
     return jsonify({"status": "server stopped"})
 
 # -----------------------------
-# サーバー起動
+# 起動
 # -----------------------------
 def start_server():
     app.run(host="0.0.0.0", port=5000, debug=False)

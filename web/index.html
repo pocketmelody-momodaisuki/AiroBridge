@@ -34,20 +34,28 @@ input[type="text"] {
 }
 </style>
 <script>
-const SERVER = "http://192.168.0.10:5000";  // ← PCのIPに変更する
+
+let SERVER = "";
+
+fetch("/server-info")
+  .then(r => r.json())
+  .then(info => {
+      SERVER = `http://${info.ip}:${info.port}`;
+  });
 
 // -----------------------------
 // テキスト
 // -----------------------------
 async function sendText() {
     const text = document.getElementById("textInput").value;
+
     await fetch(`${SERVER}/send-text`, {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({text})
     });
-    alert("テキスト送信完了");
 }
+
 
 async function receiveText() {
     const r = await fetch(`${SERVER}/receive-text`);
